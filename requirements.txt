@@ -1,0 +1,15 @@
+numpy
+scikit-learn
+scipy
+matplotlib
+pylint
+autopep8
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch==1.12.1
+pandas
+imblearn
+seaborn
+decorator
+transformers
+datasets
+evaluate
