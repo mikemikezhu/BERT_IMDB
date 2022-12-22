@@ -18,11 +18,6 @@ class BertService:
                    val_data_loader,
                    epochs, device):
 
-        # bert_model = BertClassifier()
-        # bert_model = bert_model.to(device)
-        # bert_optimizer = Adam(bert_model.parameters(), lr=BERT_LR)
-        # criterion = nn.BCELoss()
-
         train_result = Result()
         val_result = Result()
 
