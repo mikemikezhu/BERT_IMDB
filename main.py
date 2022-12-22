@@ -48,7 +48,8 @@ def main():
             pretrained_model_name_or_path = OUT_DOMAIN_PRETRAIN_MODEL
 
     pretrained_bert = BertModel.from_pretrained(pretrained_model_name_or_path)
-    model = BertClassifier(pretrained_bert=pretrained_bert)
+    model = BertClassifier(pretrained_bert=pretrained_bert,
+                           bert_model=flags.bert_model)
     model.to(device)
 
     # Load data
@@ -80,7 +81,8 @@ def main():
                                                                            device)
 
     # Test BERT
-    best_model = BertClassifier(pretrained_bert=pretrained_bert)
+    best_model = BertClassifier(pretrained_bert=pretrained_bert,
+                                bert_model=flags.bert_model)
     best_model = best_model.to(device)
     best_model.load_state_dict(best_model_weights)
     bert_service.test_bert(best_model,

@@ -14,6 +14,15 @@ TRAIN_BATCH_SIZE = 16
 VAL_BATCH_SIZE = 16
 TEST_BATCH_SIZE = 16
 
+# BERT
+BERT_LARGE = "large"
+BERT_BASE = "base"
+
+BERT_OUTPUT = {
+    BERT_LARGE: 1024,
+    BERT_BASE: 768
+}
+
 # Pretrain
 IN_DOMAIN_PRETRAIN = "in_domain_pretrain"
 IN_DOMAIN_PRETRAIN_DIR = "pretrained/checkpoint-2500"

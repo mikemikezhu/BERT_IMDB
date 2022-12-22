@@ -1,17 +1,23 @@
 import torch
 from torch import nn
 
+from utils.constants import *
+
 
 class BertClassifier(nn.Module):
 
-    def __init__(self, pretrained_bert, dropout=0.1):
+    def __init__(self, pretrained_bert,
+                 bert_model,
+                 dropout=0.1):
 
         super(BertClassifier, self).__init__()
 
         # Download pretrained model
         self._bert = pretrained_bert
         self._dropout = nn.Dropout(dropout)
-        self._classifier = nn.Linear(768, 1)
+
+        bert_output = BERT_OUTPUT[bert_model]
+        self._classifier = nn.Linear(bert_output, 1)
 
     def forward(self, input_id, mask):
 

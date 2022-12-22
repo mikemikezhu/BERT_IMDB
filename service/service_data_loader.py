@@ -115,6 +115,8 @@ class DataLoaderService:
         if all_imdb_files is None or len(all_imdb_files) == 0:
             return result
 
+        LogUtils.instance().log_info("Process BERT input: {}".format(path))
+
         result = []
         for imdb_file in all_imdb_files:
 

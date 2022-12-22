@@ -29,6 +29,16 @@ class ArgumentParserService:
             ]
         )
 
+        parser.add_argument(
+            '--bert_model',
+            type=str,
+            default=BERT_LARGE,
+            choices=[
+                BERT_LARGE,
+                BERT_BASE
+            ]
+        )
+
         parser.add_argument('--in_domain_pretrain_dir',
                             type=str, default=IN_DOMAIN_PRETRAIN_DIR)
         parser.add_argument('--out_domain_pretrain_model',

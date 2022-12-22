@@ -104,13 +104,13 @@ class BertService:
 
             output = model(input_id, mask)
 
-            batch_loss = criterion(output, label[:, None])
+            y_pred = output[:, 0]
+            batch_loss = criterion(y_pred, label)
             total_loss += batch_loss.item()
 
-            y_pred = output[:, 0]
-            y_pred = y_pred.detach().cpu().numpy()
-            label = label.detach().cpu().numpy()
-            acc = EvaluationUtils.calculate_accuracy(y_pred, label)
+            # y_pred = y_pred.detach().cpu().numpy()
+            # label = label.detach().cpu().numpy()
+            acc = EvaluationUtils.mean_accuracy(y_pred, label)
             total_acc += acc
 
             if enable_train:
