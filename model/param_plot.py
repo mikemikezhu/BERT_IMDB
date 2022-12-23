@@ -1,4 +1,4 @@
-class PlotQuery:
+class PlotParam:
 
     """ Initialize """
 

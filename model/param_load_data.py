@@ -1,4 +1,4 @@
-class LoadDataQuery:
+class LoadDataParam:
 
     """ Initialize """
 

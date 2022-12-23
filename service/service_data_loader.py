@@ -18,13 +18,13 @@ class DataLoaderService:
 
     """ Public methods """
 
-    def load_data(self, load_data_query):
+    def load_data(self, load_data_param):
 
         # Process BERT input
-        train_neg_x_path = load_data_query.train_neg_x_path
-        train_pos_x_path = load_data_query.train_pos_x_path
-        test_neg_x_path = load_data_query.test_neg_x_path
-        test_pos_x_path = load_data_query.test_pos_x_path
+        train_neg_x_path = load_data_param.train_neg_x_path
+        train_pos_x_path = load_data_param.train_pos_x_path
+        test_neg_x_path = load_data_param.test_neg_x_path
+        test_pos_x_path = load_data_param.test_pos_x_path
 
         train_neg_x = self._process_bert_input(train_neg_x_path)
         train_pos_x = self._process_bert_input(train_pos_x_path)
@@ -59,7 +59,7 @@ class DataLoaderService:
         bert_test_imdb_x, bert_test_imdb_y = zip(*bert_test_imdb_combined)
 
         # Create validation set
-        val_data_length = load_data_query.val_data_length
+        val_data_length = load_data_param.val_data_length
         bert_train_imdb_x = bert_train_imdb_x[val_data_length:]
         bert_val_imdb_x = bert_train_imdb_x[:val_data_length]
         bert_train_imdb_y = bert_train_imdb_y[val_data_length:]
@@ -81,9 +81,9 @@ class DataLoaderService:
         bert_val_dataset = ImdbDataset(bert_val_imdb_x, bert_val_imdb_y)
         bert_test_dataset = ImdbDataset(bert_test_imdb_x, bert_test_imdb_y)
 
-        train_batch_size = load_data_query.train_batch_size
-        val_batch_size = load_data_query.val_batch_size
-        test_batch_size = load_data_query.test_batch_size
+        train_batch_size = load_data_param.train_batch_size
+        val_batch_size = load_data_param.val_batch_size
+        test_batch_size = load_data_param.test_batch_size
 
         bert_train_data_loader = DataLoader(bert_train_dataset,
                                             batch_size=train_batch_size)

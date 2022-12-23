@@ -1,6 +1,7 @@
 from model.classifier import BertClassifier
-from model.query_load_data import LoadDataQuery
-from model.query_plot import PlotQuery
+from model.param_load_data import LoadDataParam
+from model.param_plot import PlotParam
+from model.param_train_test import TrainTestParam
 
 from service.service_arg_parser import ArgumentParserService
 from service.service_data_loader import DataLoaderService
@@ -55,7 +56,7 @@ def main():
     # Load data
     tokenizer = BertTokenizer.from_pretrained(pretrained_model_name_or_path)
     data_loader = DataLoaderService(tokenizer)
-    load_data_query = LoadDataQuery(flags.val_data_length,
+    load_data_param = LoadDataParam(flags.val_data_length,
                                     flags.train_neg_data_path,
                                     flags.train_pos_data_path,
                                     flags.test_neg_data_path,
@@ -64,7 +65,7 @@ def main():
                                     flags.val_batch_size,
                                     flags.test_batch_size)
     train_data_loader, val_data_loader, test_data_loader = data_loader.load_data(
-        load_data_query)
+        load_data_param)
 
     # Train BERT
     optimizer = Adam(model.parameters(),
@@ -72,19 +73,32 @@ def main():
                      weight_decay=flags.weight_decay)
     bert_service = BertService()
     criterion = nn.BCELoss()
-    best_model_weights, train_result, val_result = bert_service.train_bert(model,
-                                                                           optimizer,
-                                                                           criterion,
-                                                                           train_data_loader,
-                                                                           val_data_loader,
-                                                                           flags.num_epochs,
-                                                                           device)
+
+    train_param = TrainTestParam()
+    train_param.model = model
+    train_param.optimizer = optimizer
+    train_param.criterion = criterion
+    train_param.train_data_loader = train_data_loader
+    train_param.val_data_loader = val_data_loader
+    train_param.epochs = flags.num_epochs
+    train_param.freeze_layers = flags.freeze_layers
+    train_param.device = device
+
+    best_model_weights, train_result, val_result = bert_service.train_bert(
+        train_param)
 
     # Test BERT
     best_model = BertClassifier(pretrained_bert=pretrained_bert,
                                 bert_model=flags.bert_model)
     best_model = best_model.to(device)
     best_model.load_state_dict(best_model_weights)
+
+    test_param = TrainTestParam()
+    test_param.model = best_model
+    test_param.criterion = criterion
+    test_param.test_data_loader = test_data_loader
+    test_param.device = device
+
     bert_service.test_bert(best_model,
                            criterion,
                            test_data_loader,
@@ -92,7 +106,7 @@ def main():
 
     # Plot
     plot_service = PlotService()
-    plot_query = PlotQuery(train_result.loss_hist,
+    plot_param = PlotParam(train_result.loss_hist,
                            val_result.loss_hist,
                            "Train loss",
                            "Val loss",
@@ -100,7 +114,7 @@ def main():
                            "Loss",
                            "BERT loss history",
                            "PID: {} - bert_loss_history.png".format(pid))
-    plot_service.plot_hist(plot_query)
+    plot_service.plot_hist(plot_param)
 
 
 if __name__ == "__main__":

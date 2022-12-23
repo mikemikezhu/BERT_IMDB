@@ -44,6 +44,8 @@ class ArgumentParserService:
         parser.add_argument('--out_domain_pretrain_model',
                             type=str, default=OUT_DOMAIN_PRETRAIN_MODEL)
 
+        parser.add_argument('--freeze_layers', type=str)
+
         parser.add_argument('--learning_rate', type=float, default=BERT_LR)
         parser.add_argument('--weight_decay', type=float,
                             default=BERT_WEIGHT_DECAY)
