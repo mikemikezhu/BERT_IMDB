@@ -67,7 +67,7 @@ class BertService:
                                       test_param.test_data_loader,
                                       test_param.device)
         LogUtils.instance().log_info(
-            "Test loss: {}, test acc: {}".format(test_result.loss, test_result.acc))
+            "Test loss: {}, test acc: {}, test roc: {}".format(test_result.loss, test_result.acc, test_result.roc))
         return test_result
 
     """ Private methods """
@@ -87,6 +87,7 @@ class BertService:
 
         total_loss = 0
         total_acc = 0
+        total_roc = 0
 
         torch.set_grad_enabled(enable_train)
 
@@ -115,6 +116,9 @@ class BertService:
             acc = EvaluationUtils.mean_accuracy(y_pred, label)
             total_acc += acc
 
+            roc = EvaluationUtils.mean_roc_auc(y_pred, label)
+            total_roc += roc
+
             if enable_train:
                 model.zero_grad()
                 batch_loss.backward()
@@ -122,9 +126,11 @@ class BertService:
 
         total_loss /= len(data_loader)
         total_acc /= len(data_loader)
+        total_roc /= len(data_loader)
 
         result.loss = total_loss
         result.acc = total_acc
+        result.roc = total_roc
 
         return result
 
