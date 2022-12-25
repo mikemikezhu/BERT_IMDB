@@ -48,6 +48,7 @@ def main():
         if pretrained_model_name_or_path is None:
             pretrained_model_name_or_path = OUT_DOMAIN_PRETRAIN_MODEL
 
+    LogUtils.instance().log_info("Pretrained model name or path: {}".format(pretrained_model_name_or_path))
     pretrained_bert = BertModel.from_pretrained(pretrained_model_name_or_path)
     model = BertClassifier(pretrained_bert=pretrained_bert,
                            bert_model=flags.bert_model)

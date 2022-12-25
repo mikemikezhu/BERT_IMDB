@@ -95,6 +95,7 @@ class BertService:
             if enable_train:
                 for name, param in model.named_parameters():
                     if param.requires_grad and self._need_freeze(freeze_layers, name):
+                        LogUtils.instance().log_info("Freeze layer: {}".format(name))
                         param.requires_grad = False
             else:
                 raise ValueError("Only freeze layers when enable train")
