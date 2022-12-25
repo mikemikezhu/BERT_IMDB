@@ -118,10 +118,7 @@ def main():
     test_param.test_data_loader = test_data_loader
     test_param.device = device
 
-    bert_service.test_bert(best_model,
-                           criterion,
-                           test_data_loader,
-                           device)
+    bert_service.test_bert(test_param)
 
     # Plot
     plot_service = PlotService()
