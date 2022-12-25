@@ -18,9 +18,22 @@ from transformers import BertTokenizer
 import torch
 from torch.optim import Adam
 from torch import nn
+import os
 
 
 def main():
+
+    if not os.path.exists(os.path.join(os.getcwd(), "data")):
+        raise FileNotFoundError(
+            "Data directory not found. Please run setup.sh first!")
+
+    if not os.path.exists(os.path.join(os.getcwd(), "log")):
+        raise FileNotFoundError(
+            "Log directory not found. Please run setup.sh first!")
+
+    if not os.path.exists(os.path.join(os.getcwd(), "output")):
+        raise FileNotFoundError(
+            "Output directory not found. Please run setup.sh first!")
 
     pid = PidUtils.instance().get_pid()
     LogUtils.instance().log_info("PID: {}".format(pid))
@@ -33,6 +46,10 @@ def main():
     parser_service = ArgumentParserService()
     parser = parser_service.get_parser()
     flags = parser.parse_args()
+
+    if flags.pretrain == IN_DOMAIN_PRETRAIN and not os.path.exists(os.path.join(os.getcwd(), "pretrained")):
+        raise FileNotFoundError(
+            "In domain pretrain needs to run run_pretrained.sh first!")
 
     for k, v in sorted(vars(flags).items()):
         LogUtils.instance().log_info("\t{}: {}".format(k, v))
@@ -48,7 +65,8 @@ def main():
         if pretrained_model_name_or_path is None:
             pretrained_model_name_or_path = OUT_DOMAIN_PRETRAIN_MODEL
 
-    LogUtils.instance().log_info("Pretrained model name or path: {}".format(pretrained_model_name_or_path))
+    LogUtils.instance().log_info(
+        "Pretrained model name or path: {}".format(pretrained_model_name_or_path))
     pretrained_bert = BertModel.from_pretrained(pretrained_model_name_or_path)
     model = BertClassifier(pretrained_bert=pretrained_bert,
                            bert_model=flags.bert_model)
