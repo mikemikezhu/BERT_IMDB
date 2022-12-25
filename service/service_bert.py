@@ -138,7 +138,8 @@ class BertService:
             return False
 
         for freeze_layer in freeze_layers_list:
-            if freeze_layer in layer_name:
+            keyword = ".{}.".format(freeze_layer)
+            if keyword in layer_name:
                 return True
 
         return False
