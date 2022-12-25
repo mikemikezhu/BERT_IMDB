@@ -16,3 +16,9 @@ LOG_DIR="log"
 if [[ ! -e $LOG_DIR ]]; then
     mkdir $LOG_DIR
 fi
+
+# Create output directory
+OUTPUT_DIR="output"
+if [[ ! -e $OUTPUT_DIR ]]; then
+    mkdir $OUTPUT_DIR
+fi

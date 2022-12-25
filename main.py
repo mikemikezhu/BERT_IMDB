@@ -114,7 +114,7 @@ def main():
                            "Epoch",
                            "Loss",
                            "BERT loss history",
-                           "PID: {} - bert_loss_history.png".format(pid))
+                           "output/PID: {} - bert_loss_history.png".format(pid))
     plot_service.plot_hist(plot_param)
 
 

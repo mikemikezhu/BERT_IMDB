@@ -4,6 +4,7 @@ import copy
 
 from utils.utils_eval import EvaluationUtils
 from utils.utils_log import LogUtils
+from utils.utils_pid import PidUtils
 from model.result import Result
 
 
@@ -68,6 +69,12 @@ class BertService:
                                       test_param.device)
         LogUtils.instance().log_info(
             "Test loss: {}, test acc: {}, test roc: {}".format(test_result.loss, test_result.acc, test_result.roc))
+
+        # Output model
+        pid = PidUtils.instance().get_pid()
+        output_path = "output/PID: {} - best_model.png".format(pid)
+        torch.save(test_param.model.state_dict(), output_path)
+
         return test_result
 
     """ Private methods """
