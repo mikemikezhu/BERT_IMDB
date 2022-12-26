@@ -67,7 +67,9 @@ def main():
 
     LogUtils.instance().log_info(
         "Pretrained model name or path: {}".format(pretrained_model_name_or_path))
-    pretrained_bert = BertModel.from_pretrained(pretrained_model_name_or_path)
+
+    pretrained_bert = BertModel.from_pretrained(pretrained_model_name_or_path,
+                                                output_attentions=True)
     model = BertClassifier(pretrained_bert=pretrained_bert,
                            bert_model=flags.bert_model)
     model.to(device)
@@ -118,19 +120,77 @@ def main():
     test_param.test_data_loader = test_data_loader
     test_param.device = device
 
-    bert_service.test_bert(test_param)
+    test_result = bert_service.test_bert(test_param)
 
     # Plot
     plot_service = PlotService()
-    plot_param = PlotParam(train_result.loss_hist,
-                           val_result.loss_hist,
-                           "Train loss",
-                           "Val loss",
-                           "Epoch",
-                           "Loss",
-                           "BERT loss history",
-                           "output/PID: {} - bert_loss_history.png".format(pid))
+    plot_param = PlotParam()
+    plot_param.train_hist = train_result.loss_hist
+    plot_param.val_hist = val_result.loss_hist
+    plot_param.train_label = "Train loss"
+    plot_param.val_label = "Val loss"
+    plot_param.x_label = "Epoch"
+    plot_param.y_label = "Loss"
+    plot_param.plot_title = "BERT loss history"
+    plot_param.file_name = "output/PID: {} - bert_loss_history.png".format(pid)
     plot_service.plot_hist(plot_param)
+
+    # Plot attention matrix
+    tp_attention = test_result.tp_attention
+    if tp_attention is not None:
+        plot_param = PlotParam()
+        input = (tp_attention.input[:, 0]).cpu().detach().numpy().copy()
+        attention = (tp_attention.attention[0]).cpu().detach().numpy().copy()
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
+        plot_param.attention = attention
+        plot_param.plot_title = "True positive attention"
+        plot_param.file_name = "output/PID: {} - bert_tp_attention.png".format(
+            pid)
+        plot_service.plot_attention(plot_param)
+    else:
+        LogUtils.instance().log_warning("No true positive attention")
+
+    tn_attention = test_result.tn_attention
+    if tn_attention is not None:
+        plot_param = PlotParam()
+        input = (tn_attention.input[:, 0]).cpu().detach().numpy().copy()
+        attention = (tn_attention.attention[0]).cpu().detach().numpy().copy()
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
+        plot_param.attention = attention
+        plot_param.plot_title = "True negative attention"
+        plot_param.file_name = "output/PID: {} - bert_tn_attention.png".format(
+            pid)
+        plot_service.plot_attention(plot_param)
+    else:
+        LogUtils.instance().log_warning("No true negative attention")
+
+    fp_attention = test_result.fp_attention
+    if fp_attention is not None:
+        plot_param = PlotParam()
+        input = (fp_attention.input[:, 0]).cpu().detach().numpy().copy()
+        attention = (fp_attention.attention[0]).cpu().detach().numpy().copy()
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
+        plot_param.attention = attention
+        plot_param.plot_title = "False positive attention"
+        plot_param.file_name = "output/PID: {} - bert_fp_attention.png".format(
+            pid)
+        plot_service.plot_attention(plot_param)
+    else:
+        LogUtils.instance().log_warning("No false positive attention")
+
+    fn_attention = test_result.fn_attention
+    if fn_attention is not None:
+        plot_param = PlotParam()
+        input = (fn_attention.input[:, 0]).cpu().detach().numpy().copy()
+        attention = (fn_attention.attention[0]).cpu().detach().numpy().copy()
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
+        plot_param.attention = attention
+        plot_param.plot_title = "False negative attention"
+        plot_param.file_name = "output/PID: {} - bert_fn_attention.png".format(
+            pid)
+        plot_service.plot_attention(plot_param)
+    else:
+        LogUtils.instance().log_warning("No false negative attention")
 
 
 if __name__ == "__main__":

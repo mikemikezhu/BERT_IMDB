@@ -21,9 +21,11 @@ class BertClassifier(nn.Module):
 
     def forward(self, input_id, mask):
 
-        _, pooled_output = self._bert(input_ids=input_id,
-                                      attention_mask=mask,
-                                      return_dict=False)
+        _, pooled_output, attentions = self._bert(input_ids=input_id,
+                                                  attention_mask=mask,
+                                                  return_dict=False)
+
         dropout_output = self._dropout(pooled_output)
         classifier_output = self._classifier(dropout_output)
-        return torch.sigmoid(classifier_output)
+
+        return torch.sigmoid(classifier_output), attentions
