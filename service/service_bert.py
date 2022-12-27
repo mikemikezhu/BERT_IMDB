@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import torch
 import copy
+import numpy as np
 
 from utils.utils_eval import EvaluationUtils
 from utils.utils_log import LogUtils
@@ -73,7 +74,7 @@ class BertService:
 
         # Output model
         pid = PidUtils.instance().get_pid()
-        output_path = "output/PID: {} - best_model.png".format(pid)
+        output_path = "output/PID: {} - best_model.pt".format(pid)
         torch.save(test_param.model.state_dict(), output_path)
 
         return test_result
@@ -114,6 +115,7 @@ class BertService:
             else:
                 raise ValueError("Only freeze layers when enable train")
 
+        y_preds, y_test = [], []
         for input, label in tqdm(data_loader):
 
             label = label.to(device)
@@ -137,6 +139,9 @@ class BertService:
                 batch_loss.backward()
                 optimizer.step()
             else:
+                y_preds.append(y_pred.detach().cpu().numpy())
+                y_test.append(label.detach().cpu().numpy())
+
                 # Attention matrix
                 head_idx = 0  # Select the first attention head
                 # Select the last attention layer
@@ -189,6 +194,12 @@ class BertService:
         result.tn_attention = tn_attention
         result.fp_attention = fp_attention
         result.fn_attention = fn_attention
+
+        if len(y_preds) > 0:
+            result.y_preds = np.ravel(y_preds)
+
+        if len(y_test) > 0:
+            result.y_test = np.ravel(y_test)
 
         return result
 

@@ -20,6 +20,8 @@ from torch.optim import Adam
 from torch import nn
 import os
 
+import pandas as pd
+
 
 def main():
 
@@ -122,6 +124,11 @@ def main():
 
     test_result = bert_service.test_bert(test_param)
 
+    pd.DataFrame(test_result.y_preds).to_csv(
+        "output/PID: {} - bert_y_preds.csv".format(pid))
+    pd.DataFrame(test_result.y_test).to_csv(
+        "output/PID: {} - bert_y_test.csv".format(pid))
+
     # Plot
     plot_service = PlotService()
     plot_param = PlotParam()
@@ -139,12 +146,21 @@ def main():
     tp_attention = test_result.tp_attention
     if tp_attention is not None:
         plot_param = PlotParam()
-        input = (tp_attention.input[:, 0]).cpu().detach().numpy().copy()
+        input = (tp_attention.input[0]).cpu().detach().numpy().copy()
         attention = (tp_attention.attention[0]).cpu().detach().numpy().copy()
-        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
-        plot_param.attention = attention
+
+        plot_param.tokens = None
+        non_zero_count = len(input.nonzero()[0])
+        plot_param.attention = attention[:non_zero_count, :non_zero_count]
         plot_param.plot_title = "True positive attention"
         plot_param.file_name = "output/PID: {} - bert_tp_attention.png".format(
+            pid)
+        plot_service.plot_attention(plot_param)
+
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)[:20]
+        plot_param.attention = attention[:20, :20]
+        plot_param.plot_title = "True positive attention"
+        plot_param.file_name = "output/PID: {} - bert_tp_attention_2.png".format(
             pid)
         plot_service.plot_attention(plot_param)
     else:
@@ -153,12 +169,21 @@ def main():
     tn_attention = test_result.tn_attention
     if tn_attention is not None:
         plot_param = PlotParam()
-        input = (tn_attention.input[:, 0]).cpu().detach().numpy().copy()
+        input = (tn_attention.input[0]).cpu().detach().numpy().copy()
         attention = (tn_attention.attention[0]).cpu().detach().numpy().copy()
-        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
-        plot_param.attention = attention
+
+        plot_param.tokens = None
+        non_zero_count = len(input.nonzero()[0])
+        plot_param.attention = attention[:non_zero_count, :non_zero_count]
         plot_param.plot_title = "True negative attention"
         plot_param.file_name = "output/PID: {} - bert_tn_attention.png".format(
+            pid)
+        plot_service.plot_attention(plot_param)
+
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)[:20]
+        plot_param.attention = attention[:20, :20]
+        plot_param.plot_title = "True negative attention"
+        plot_param.file_name = "output/PID: {} - bert_tn_attention_2.png".format(
             pid)
         plot_service.plot_attention(plot_param)
     else:
@@ -167,12 +192,21 @@ def main():
     fp_attention = test_result.fp_attention
     if fp_attention is not None:
         plot_param = PlotParam()
-        input = (fp_attention.input[:, 0]).cpu().detach().numpy().copy()
+        input = (fp_attention.input[0]).cpu().detach().numpy().copy()
         attention = (fp_attention.attention[0]).cpu().detach().numpy().copy()
-        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
-        plot_param.attention = attention
+
+        plot_param.tokens = None
+        non_zero_count = len(input.nonzero()[0])
+        plot_param.attention = attention[:non_zero_count, :non_zero_count]
         plot_param.plot_title = "False positive attention"
         plot_param.file_name = "output/PID: {} - bert_fp_attention.png".format(
+            pid)
+        plot_service.plot_attention(plot_param)
+
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)[:20]
+        plot_param.attention = attention[:20, :20]
+        plot_param.plot_title = "False positive attention"
+        plot_param.file_name = "output/PID: {} - bert_fp_attention_2.png".format(
             pid)
         plot_service.plot_attention(plot_param)
     else:
@@ -181,12 +215,21 @@ def main():
     fn_attention = test_result.fn_attention
     if fn_attention is not None:
         plot_param = PlotParam()
-        input = (fn_attention.input[:, 0]).cpu().detach().numpy().copy()
+        input = (fn_attention.input[0]).cpu().detach().numpy().copy()
         attention = (fn_attention.attention[0]).cpu().detach().numpy().copy()
-        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
-        plot_param.attention = attention
+
+        plot_param.tokens = None
+        non_zero_count = len(input.nonzero()[0])
+        plot_param.attention = attention[:non_zero_count, :non_zero_count]
         plot_param.plot_title = "False negative attention"
         plot_param.file_name = "output/PID: {} - bert_fn_attention.png".format(
+            pid)
+        plot_service.plot_attention(plot_param)
+
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)[:20]
+        plot_param.attention = attention[:20, :20]
+        plot_param.plot_title = "False negative attention"
+        plot_param.file_name = "output/PID: {} - bert_fn_attention_2.png".format(
             pid)
         plot_service.plot_attention(plot_param)
     else:

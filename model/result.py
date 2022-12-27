@@ -15,6 +15,8 @@ class Result:
         self._tn_attention = None  # True negative
         self._fp_attention = None  # False positive
         self._fn_attention = None  # False negative
+        self._y_preds = None
+        self._y_test = None
 
     """ Getters """
 
@@ -54,6 +56,14 @@ class Result:
     def fn_attention(self) -> AttentionResult:
         return self._fn_attention
 
+    @property
+    def y_preds(self):
+        return self._y_preds
+
+    @property
+    def y_test(self):
+        return self._y_test
+
     """ Setters """
 
     @loss.setter
@@ -91,3 +101,11 @@ class Result:
     @fn_attention.setter
     def fn_attention(self, fn_attention: AttentionResult):
         self._fn_attention = fn_attention
+
+    @y_preds.setter
+    def y_preds(self, y_preds):
+        self._y_preds = y_preds
+
+    @y_test.setter
+    def y_test(self, y_test):
+        self._y_test = y_test
