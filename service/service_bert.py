@@ -145,11 +145,12 @@ class BertService:
                 # Attention matrix
                 head_idx = 0  # Select the first attention head
                 # Select the last attention layer
+                prediction = (y_pred > 0.5).float()
                 last_layer_attention = (list(attentions))[-1]
                 if tp_attention is None:
 
                     LogUtils.instance().log_info("Create attention matrix for true positive samples")
-                    bool_matrix = (y_pred == label) & (label == 1.0)
+                    bool_matrix = (prediction == label) & (label == 1.0)
                     tp_attention = self._create_attention(bool_matrix,
                                                           input_id,
                                                           last_layer_attention,
@@ -158,7 +159,7 @@ class BertService:
                 if tn_attention is None:
 
                     LogUtils.instance().log_info("Create attention matrix for true negative samples")
-                    bool_matrix = (y_pred == label) & (label == 0.0)
+                    bool_matrix = (prediction == label) & (label == 0.0)
                     tn_attention = self._create_attention(bool_matrix,
                                                           input_id,
                                                           last_layer_attention,
@@ -167,7 +168,7 @@ class BertService:
                 if fp_attention is None:
 
                     LogUtils.instance().log_info("Create attention matrix for false positive samples")
-                    bool_matrix = (y_pred != label) & (label == 1.0)
+                    bool_matrix = (prediction != label) & (label == 1.0)
                     fp_attention = self._create_attention(bool_matrix,
                                                           input_id,
                                                           last_layer_attention,
@@ -176,7 +177,7 @@ class BertService:
                 if fn_attention is None:
 
                     LogUtils.instance().log_info("Create attention matrix for false negative samples")
-                    bool_matrix = (y_pred != label) & (label == 0.0)
+                    bool_matrix = (prediction != label) & (label == 0.0)
                     fn_attention = self._create_attention(bool_matrix,
                                                           input_id,
                                                           last_layer_attention,
