@@ -23,5 +23,5 @@ class PlotService:
         if plot_param.tokens is not None:
             ax.set_xticklabels(plot_param.tokens, rotation=90)
             ax.set_yticklabels(plot_param.tokens, rotation=0)
-        plt.savefig(plot_param.file_name)
+        plt.savefig(plot_param.file_name, bbox_inches="tight")
         plt.clf()
