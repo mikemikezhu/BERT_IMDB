@@ -16,6 +16,8 @@ pip install -r requirements.txt
 
 ### Pretrain using Masked-Language Modelling (MLM)
 
+This is required when training the model, while not necessary when testing the model.
+
 ```console
 sh run_pretrained.sh
 ```
@@ -70,4 +72,18 @@ python3 main.py \
     --train_batch_size=16 \
     --val_batch_size=16 \
     --test_batch_size=16
+```
+
+## Test Model (How to Reproduce our Test AUROC)
+
+First, download our model with best performance:
+
+https://drive.google.com/file/d/11TL5k68VkLCdGQJexf0Jpf_MsYGOZon7/view?usp=share_link
+
+Then, put it in the root directly of the project.
+
+Then, run the following script in the command line
+
+```console
+python3 main_test.py --best_model_path=best_model.pt
 ```

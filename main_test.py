@@ -54,23 +54,18 @@ def main():
         raise FileNotFoundError(
             "Please specify valid model path!")
 
-    if flags.pretrain == IN_DOMAIN_PRETRAIN and not os.path.exists(os.path.join(os.getcwd(), "pretrained")):
-        raise FileNotFoundError(
-            "In domain pretrain needs to run run_pretrained.sh first!")
-
     for k, v in sorted(vars(flags).items()):
         LogUtils.instance().log_info("\t{}: {}".format(k, v))
 
-    # Pretrained model
-    pretrained_model_name_or_path = None
-    if flags.pretrain == IN_DOMAIN_PRETRAIN:
-        pretrained_model_name_or_path = flags.in_domain_pretrain_dir
-        if pretrained_model_name_or_path is None:
-            pretrained_model_name_or_path = IN_DOMAIN_PRETRAIN_DIR
+    # Pretrained model 
+    # Note: we can use default BERT pretrained model
+    # because we will initialize model with best model weights
+    if flags.bert_model == BERT_LARGE:
+        pretrained_model_name_or_path = "bert-large-uncased"
+    elif flags.bert_model == BERT_BASE:
+        pretrained_model_name_or_path = "bert-base-uncased"
     else:
         pretrained_model_name_or_path = flags.out_domain_pretrain_model
-        if pretrained_model_name_or_path is None:
-            pretrained_model_name_or_path = OUT_DOMAIN_PRETRAIN_MODEL
 
     LogUtils.instance().log_info(
         "Pretrained model name or path: {}".format(pretrained_model_name_or_path))
@@ -94,8 +89,6 @@ def main():
                                     flags.test_batch_size)
     _, _, test_data_loader = data_loader.load_data(load_data_param,
                                                    test_only=True)
-
-    print(tokenizer.convert_tokens_to_ids("[CLS]"))
     
     # Test BERT
     bert_service = BertService()
