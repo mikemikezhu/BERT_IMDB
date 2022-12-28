@@ -1,10 +1,13 @@
 from tqdm import tqdm
 import torch
 import copy
+import numpy as np
 
 from utils.utils_eval import EvaluationUtils
 from utils.utils_log import LogUtils
+from utils.utils_pid import PidUtils
 from model.result import Result
+from model.result import AttentionResult
 
 
 class BertService:
@@ -67,7 +70,13 @@ class BertService:
                                       test_param.test_data_loader,
                                       test_param.device)
         LogUtils.instance().log_info(
-            "Test loss: {}, test acc: {}".format(test_result.loss, test_result.acc))
+            "Test loss: {}, test acc: {}, test roc: {}".format(test_result.loss, test_result.acc, test_result.roc))
+
+        # Output model
+        pid = PidUtils.instance().get_pid()
+        output_path = "output/PID: {} - best_model.pt".format(pid)
+        torch.save(test_param.model.state_dict(), output_path)
+
         return test_result
 
     """ Private methods """
@@ -87,6 +96,12 @@ class BertService:
 
         total_loss = 0
         total_acc = 0
+        total_roc = 0
+
+        tp_attention = None
+        tn_attention = None
+        fp_attention = None
+        fn_attention = None
 
         torch.set_grad_enabled(enable_train)
 
@@ -95,17 +110,19 @@ class BertService:
             if enable_train:
                 for name, param in model.named_parameters():
                     if param.requires_grad and self._need_freeze(freeze_layers, name):
+                        LogUtils.instance().log_info("Freeze layer: {}".format(name))
                         param.requires_grad = False
             else:
                 raise ValueError("Only freeze layers when enable train")
 
+        y_preds, y_test = [], []
         for input, label in tqdm(data_loader):
 
             label = label.to(device)
             mask = input['attention_mask'].to(device)
             input_id = input['input_ids'].squeeze(1).to(device)
 
-            output = model(input_id, mask)
+            output, attentions = model(input_id, mask)
 
             y_pred = output[:, 0]
             batch_loss = criterion(y_pred, label)
@@ -114,16 +131,76 @@ class BertService:
             acc = EvaluationUtils.mean_accuracy(y_pred, label)
             total_acc += acc
 
+            roc = EvaluationUtils.mean_roc_auc(y_pred, label)
+            total_roc += roc
+
             if enable_train:
                 model.zero_grad()
                 batch_loss.backward()
                 optimizer.step()
+            else:
+                y_preds.append(y_pred.detach().cpu().numpy())
+                y_test.append(label.detach().cpu().numpy())
+
+                # Attention matrix
+                head_idx = 0  # Select the first attention head
+                # Select the last attention layer
+                prediction = (y_pred > 0.5).float()
+                last_layer_attention = (list(attentions))[-1]
+                if tp_attention is None:
+
+                    LogUtils.instance().log_info("Create attention matrix for true positive samples")
+                    bool_matrix = (prediction == label) & (label == 1.0)
+                    tp_attention = self._create_attention(bool_matrix,
+                                                          input_id,
+                                                          last_layer_attention,
+                                                          head_idx)
+
+                if tn_attention is None:
+
+                    LogUtils.instance().log_info("Create attention matrix for true negative samples")
+                    bool_matrix = (prediction == label) & (label == 0.0)
+                    tn_attention = self._create_attention(bool_matrix,
+                                                          input_id,
+                                                          last_layer_attention,
+                                                          head_idx)
+
+                if fp_attention is None:
+
+                    LogUtils.instance().log_info("Create attention matrix for false positive samples")
+                    bool_matrix = (prediction != label) & (label == 1.0)
+                    fp_attention = self._create_attention(bool_matrix,
+                                                          input_id,
+                                                          last_layer_attention,
+                                                          head_idx)
+
+                if fn_attention is None:
+
+                    LogUtils.instance().log_info("Create attention matrix for false negative samples")
+                    bool_matrix = (prediction != label) & (label == 0.0)
+                    fn_attention = self._create_attention(bool_matrix,
+                                                          input_id,
+                                                          last_layer_attention,
+                                                          head_idx)
 
         total_loss /= len(data_loader)
         total_acc /= len(data_loader)
+        total_roc /= len(data_loader)
 
         result.loss = total_loss
         result.acc = total_acc
+        result.roc = total_roc
+
+        result.tp_attention = tp_attention
+        result.tn_attention = tn_attention
+        result.fp_attention = fp_attention
+        result.fn_attention = fn_attention
+
+        if len(y_preds) > 0:
+            result.y_preds = np.ravel(y_preds)
+
+        if len(y_test) > 0:
+            result.y_test = np.ravel(y_test)
 
         return result
 
@@ -137,7 +214,31 @@ class BertService:
             return False
 
         for freeze_layer in freeze_layers_list:
-            if freeze_layer in layer_name:
+            keyword = ".{}.".format(freeze_layer)
+            if keyword in layer_name:
                 return True
 
         return False
+
+    def _create_attention(self, bool_matrix,
+                          input_id,
+                          last_layer_attention,
+                          head_idx):
+
+        result = None
+
+        indices = list(bool_matrix.nonzero())
+        LogUtils.instance().log_info("Total samples index: {}".format(indices))
+
+        if len(indices) > 0:
+
+            sample_idx = indices[0]
+            LogUtils.instance().log_info("First sample index: {}".format(sample_idx))
+
+            input = input_id[sample_idx]
+            sample_attention = last_layer_attention[sample_idx, head_idx]
+
+            result = AttentionResult(input,
+                                     sample_attention)
+
+        return result

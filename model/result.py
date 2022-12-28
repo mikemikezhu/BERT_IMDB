@@ -1,3 +1,6 @@
+from model.result_attention import AttentionResult
+
+
 class Result:
 
     """ Initialize """
@@ -8,6 +11,12 @@ class Result:
         self._roc = None
         self._loss_hist = None
         self._acc_hist = None
+        self._tp_attention = None  # True positive
+        self._tn_attention = None  # True negative
+        self._fp_attention = None  # False positive
+        self._fn_attention = None  # False negative
+        self._y_preds = None
+        self._y_test = None
 
     """ Getters """
 
@@ -31,6 +40,30 @@ class Result:
     def acc_hist(self) -> list:
         return self._acc_hist
 
+    @property
+    def tp_attention(self) -> AttentionResult:
+        return self._tp_attention
+
+    @property
+    def tn_attention(self) -> AttentionResult:
+        return self._tn_attention
+
+    @property
+    def fp_attention(self) -> AttentionResult:
+        return self._fp_attention
+
+    @property
+    def fn_attention(self) -> AttentionResult:
+        return self._fn_attention
+
+    @property
+    def y_preds(self):
+        return self._y_preds
+
+    @property
+    def y_test(self):
+        return self._y_test
+
     """ Setters """
 
     @loss.setter
@@ -52,3 +85,27 @@ class Result:
     @acc_hist.setter
     def acc_hist(self, acc_hist: list):
         self._acc_hist = acc_hist
+
+    @tp_attention.setter
+    def tp_attention(self, tp_attention: AttentionResult):
+        self._tp_attention = tp_attention
+
+    @tn_attention.setter
+    def tn_attention(self, tn_attention: AttentionResult):
+        self._tn_attention = tn_attention
+
+    @fp_attention.setter
+    def fp_attention(self, fp_attention: AttentionResult):
+        self._fp_attention = fp_attention
+
+    @fn_attention.setter
+    def fn_attention(self, fn_attention: AttentionResult):
+        self._fn_attention = fn_attention
+
+    @y_preds.setter
+    def y_preds(self, y_preds):
+        self._y_preds = y_preds
+
+    @y_test.setter
+    def y_test(self, y_test):
+        self._y_test = y_test

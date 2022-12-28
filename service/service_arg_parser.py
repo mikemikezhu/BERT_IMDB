@@ -69,3 +69,5 @@ class ArgumentParserService:
                             default=VAL_BATCH_SIZE)
         parser.add_argument('--test_batch_size', type=int,
                             default=TEST_BATCH_SIZE)
+
+        parser.add_argument('--best_model_path', type=str)
