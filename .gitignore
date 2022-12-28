@@ -186,6 +186,9 @@ poetry.toml
 .history
 .ionide
 
-checkpoint/
+pretrained/
+transformers/
+log/
+data/
 
 # End of https://www.toptal.com/developers/gitignore/api/python

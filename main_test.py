@@ -16,11 +16,12 @@ from transformers import BertModel
 from transformers import BertTokenizer
 
 import torch
-from torch.optim import Adam
 from torch import nn
 import os
-
+import numpy as np
+import requests
 import pandas as pd
+import string
 
 
 def main():
@@ -49,23 +50,22 @@ def main():
     parser = parser_service.get_parser()
     flags = parser.parse_args()
 
-    if flags.pretrain == IN_DOMAIN_PRETRAIN and not os.path.exists(os.path.join(os.getcwd(), "pretrained")):
+    if flags.best_model_path is None or not os.path.exists(os.path.join(os.getcwd(), flags.best_model_path)):
         raise FileNotFoundError(
-            "In domain pretrain needs to run run_pretrained.sh first!")
+            "Please specify valid model path!")
 
     for k, v in sorted(vars(flags).items()):
         LogUtils.instance().log_info("\t{}: {}".format(k, v))
 
-    # Pretrained model
-    pretrained_model_name_or_path = None
-    if flags.pretrain == IN_DOMAIN_PRETRAIN:
-        pretrained_model_name_or_path = flags.in_domain_pretrain_dir
-        if pretrained_model_name_or_path is None:
-            pretrained_model_name_or_path = IN_DOMAIN_PRETRAIN_DIR
+    # Pretrained model 
+    # Note: we can use default BERT pretrained model
+    # because we will initialize model with best model weights
+    if flags.bert_model == BERT_LARGE:
+        pretrained_model_name_or_path = "bert-large-uncased"
+    elif flags.bert_model == BERT_BASE:
+        pretrained_model_name_or_path = "bert-base-uncased"
     else:
         pretrained_model_name_or_path = flags.out_domain_pretrain_model
-        if pretrained_model_name_or_path is None:
-            pretrained_model_name_or_path = OUT_DOMAIN_PRETRAIN_MODEL
 
     LogUtils.instance().log_info(
         "Pretrained model name or path: {}".format(pretrained_model_name_or_path))
@@ -87,34 +87,16 @@ def main():
                                     flags.train_batch_size,
                                     flags.val_batch_size,
                                     flags.test_batch_size)
-    train_data_loader, val_data_loader, test_data_loader = data_loader.load_data(
-        load_data_param)
-
-    # Train BERT
-    optimizer = Adam(model.parameters(),
-                     lr=flags.learning_rate,
-                     weight_decay=flags.weight_decay)
+    _, _, test_data_loader = data_loader.load_data(load_data_param,
+                                                   test_only=True)
+    
+    # Test BERT
     bert_service = BertService()
     criterion = nn.BCELoss()
-
-    train_param = TrainTestParam()
-    train_param.model = model
-    train_param.optimizer = optimizer
-    train_param.criterion = criterion
-    train_param.train_data_loader = train_data_loader
-    train_param.val_data_loader = val_data_loader
-    train_param.epochs = flags.num_epochs
-    train_param.freeze_layers = flags.freeze_layers
-    train_param.device = device
-
-    best_model_weights, train_result, val_result = bert_service.train_bert(
-        train_param)
-
-    # Test BERT
     best_model = BertClassifier(pretrained_bert=pretrained_bert,
                                 bert_model=flags.bert_model)
     best_model = best_model.to(device)
-    best_model.load_state_dict(best_model_weights)
+    best_model.load_state_dict(torch.load(flags.best_model_path))
 
     test_param = TrainTestParam()
     test_param.model = best_model
@@ -129,38 +111,39 @@ def main():
     pd.DataFrame(test_result.y_test).to_csv(
         "output/PID: {} - bert_y_test.csv".format(pid))
 
-    # Plot
-    plot_service = PlotService()
-    plot_param = PlotParam()
-    plot_param.train_hist = train_result.loss_hist
-    plot_param.val_hist = val_result.loss_hist
-    plot_param.train_label = "Train loss"
-    plot_param.val_label = "Val loss"
-    plot_param.x_label = "Epoch"
-    plot_param.y_label = "Loss"
-    plot_param.plot_title = "BERT loss history"
-    plot_param.file_name = "output/PID: {} - bert_loss_history.png".format(pid)
-    plot_service.plot_hist(plot_param)
-
     # Plot attention matrix
+    stopwords_list = requests.get("https://gist.githubusercontent.com/rg089/35e00abf8941d72d419224cfd5b5925d/raw/12d899b70156fd0041fa9778d657330b024b959c/stopwords.txt").content
+    stopwords = set(stopwords_list.decode().splitlines())
+    stopwords.update([*string.punctuation])
+
+    stopwords_ids = tokenizer.convert_tokens_to_ids(stopwords)
+    plot_service = PlotService()
     tp_attention = test_result.tp_attention
     if tp_attention is not None:
         plot_param = PlotParam()
         input = (tp_attention.input[0]).cpu().detach().numpy().copy()
         attention = (tp_attention.attention[0]).cpu().detach().numpy().copy()
 
-        plot_param.tokens = None
-        non_zero_count = len(input.nonzero()[0])
-        plot_param.attention = attention[:non_zero_count, :non_zero_count]
+        non_stop_words_pos = [pos for pos in range(len(input)) if input[pos] not in stopwords_ids]
+        non_stop_words_pos = np.asarray(non_stop_words_pos)
+        filtered_attention = attention[non_stop_words_pos, :]
+        filtered_attention = filtered_attention[:, non_stop_words_pos]
+
+        attention_sum = np.sum(filtered_attention, axis=0)
+        attention_sort_index = np.argsort(attention_sum)[::-1]
+        top_word_index = attention_sort_index[:20]
+        top_word_index = np.sort(top_word_index)
+        top_word_index = np.insert(top_word_index, 0, 0)
+
+        filtered_attention = filtered_attention[top_word_index, :]
+        filtered_attention = filtered_attention[:, top_word_index]
+
+        input = input[non_stop_words_pos]
+        input = input[top_word_index]
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
+        plot_param.attention = filtered_attention
         plot_param.plot_title = "True positive attention"
         plot_param.file_name = "output/PID: {} - bert_tp_attention.png".format(
-            pid)
-        plot_service.plot_attention(plot_param)
-
-        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)[:20]
-        plot_param.attention = attention[:20, :20]
-        plot_param.plot_title = "True positive attention"
-        plot_param.file_name = "output/PID: {} - bert_tp_attention_2.png".format(
             pid)
         plot_service.plot_attention(plot_param)
     else:
@@ -172,18 +155,26 @@ def main():
         input = (tn_attention.input[0]).cpu().detach().numpy().copy()
         attention = (tn_attention.attention[0]).cpu().detach().numpy().copy()
 
-        plot_param.tokens = None
-        non_zero_count = len(input.nonzero()[0])
-        plot_param.attention = attention[:non_zero_count, :non_zero_count]
+        non_stop_words_pos = [pos for pos in range(len(input)) if input[pos] not in stopwords_ids]
+        non_stop_words_pos = np.asarray(non_stop_words_pos)
+        filtered_attention = attention[non_stop_words_pos, :]
+        filtered_attention = filtered_attention[:, non_stop_words_pos]
+
+        attention_sum = np.sum(filtered_attention, axis=0)
+        attention_sort_index = np.argsort(attention_sum)[::-1]
+        top_word_index = attention_sort_index[:20]
+        top_word_index = np.sort(top_word_index)
+        top_word_index = np.insert(top_word_index, 0, 0)
+
+        filtered_attention = filtered_attention[top_word_index, :]
+        filtered_attention = filtered_attention[:, top_word_index]
+
+        input = input[non_stop_words_pos]
+        input = input[top_word_index]
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
+        plot_param.attention = filtered_attention
         plot_param.plot_title = "True negative attention"
         plot_param.file_name = "output/PID: {} - bert_tn_attention.png".format(
-            pid)
-        plot_service.plot_attention(plot_param)
-
-        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)[:20]
-        plot_param.attention = attention[:20, :20]
-        plot_param.plot_title = "True negative attention"
-        plot_param.file_name = "output/PID: {} - bert_tn_attention_2.png".format(
             pid)
         plot_service.plot_attention(plot_param)
     else:
@@ -195,18 +186,26 @@ def main():
         input = (fp_attention.input[0]).cpu().detach().numpy().copy()
         attention = (fp_attention.attention[0]).cpu().detach().numpy().copy()
 
-        plot_param.tokens = None
-        non_zero_count = len(input.nonzero()[0])
-        plot_param.attention = attention[:non_zero_count, :non_zero_count]
+        non_stop_words_pos = [pos for pos in range(len(input)) if input[pos] not in stopwords_ids]
+        non_stop_words_pos = np.asarray(non_stop_words_pos)
+        filtered_attention = attention[non_stop_words_pos, :]
+        filtered_attention = filtered_attention[:, non_stop_words_pos]
+
+        attention_sum = np.sum(filtered_attention, axis=0)
+        attention_sort_index = np.argsort(attention_sum)[::-1]
+        top_word_index = attention_sort_index[:20]
+        top_word_index = np.sort(top_word_index)
+        top_word_index = np.insert(top_word_index, 0, 0)
+
+        filtered_attention = filtered_attention[top_word_index, :]
+        filtered_attention = filtered_attention[:, top_word_index]
+
+        input = input[non_stop_words_pos]
+        input = input[top_word_index]
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
+        plot_param.attention = filtered_attention
         plot_param.plot_title = "False positive attention"
         plot_param.file_name = "output/PID: {} - bert_fp_attention.png".format(
-            pid)
-        plot_service.plot_attention(plot_param)
-
-        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)[:20]
-        plot_param.attention = attention[:20, :20]
-        plot_param.plot_title = "False positive attention"
-        plot_param.file_name = "output/PID: {} - bert_fp_attention_2.png".format(
             pid)
         plot_service.plot_attention(plot_param)
     else:
@@ -218,18 +217,26 @@ def main():
         input = (fn_attention.input[0]).cpu().detach().numpy().copy()
         attention = (fn_attention.attention[0]).cpu().detach().numpy().copy()
 
-        plot_param.tokens = None
-        non_zero_count = len(input.nonzero()[0])
-        plot_param.attention = attention[:non_zero_count, :non_zero_count]
+        non_stop_words_pos = [pos for pos in range(len(input)) if input[pos] not in stopwords_ids]
+        non_stop_words_pos = np.asarray(non_stop_words_pos)
+        filtered_attention = attention[non_stop_words_pos, :]
+        filtered_attention = filtered_attention[:, non_stop_words_pos]
+
+        attention_sum = np.sum(filtered_attention, axis=0)
+        attention_sort_index = np.argsort(attention_sum)[::-1]
+        top_word_index = attention_sort_index[:20]
+        top_word_index = np.sort(top_word_index)
+        top_word_index = np.insert(top_word_index, 0, 0)
+
+        filtered_attention = filtered_attention[top_word_index, :]
+        filtered_attention = filtered_attention[:, top_word_index]
+
+        input = input[non_stop_words_pos]
+        input = input[top_word_index]
+        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)
+        plot_param.attention = filtered_attention
         plot_param.plot_title = "False negative attention"
         plot_param.file_name = "output/PID: {} - bert_fn_attention.png".format(
-            pid)
-        plot_service.plot_attention(plot_param)
-
-        plot_param.tokens = tokenizer.convert_ids_to_tokens(input)[:20]
-        plot_param.attention = attention[:20, :20]
-        plot_param.plot_title = "False negative attention"
-        plot_param.file_name = "output/PID: {} - bert_fn_attention_2.png".format(
             pid)
         plot_service.plot_attention(plot_param)
     else:
